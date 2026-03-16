@@ -5,6 +5,7 @@ import SimulationView from '../views/SimulationView.vue'
 import SimulationRunView from '../views/SimulationRunView.vue'
 import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
+import FlowDashboard from '../views/FlowDashboard.vue'
 
 const routes = [
   {
@@ -29,6 +30,11 @@ const routes = [
     name: 'SimulationRun',
     component: SimulationRunView,
     props: true
+  },
+  {
+    path: '/alps',
+    name: 'FlowDashboard',
+    component: FlowDashboard
   },
   {
     path: '/report/:reportId',

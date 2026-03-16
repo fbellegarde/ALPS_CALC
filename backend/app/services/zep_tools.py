@@ -12,6 +12,7 @@ import time
 import json
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from app.services.alps_service import AlpsFlowEngine
 
 from zep_cloud.client import Zep
 
@@ -940,6 +941,24 @@ class ZepToolsService:
             "total_entities": len(entities)
         }
     
+        def run_alps_flow_prediction(self, shift_data: list) -> str:
+            """
+            TOOL FOR AI AGENTS: Runs the Amazon ALPS 24/7 Flow Forecasting engine.
+            The agent must pass a list of dictionaries containing shift volume and headcount.
+            Returns a stringified JSON report of the CPT risks and VTO/VET recommendations.
+            """
+            try:
+                engine = AlpsFlowEngine()
+                results = engine.calculate_cascade(shift_data)
+                # Summarize the output for the LLM to digest easily
+                summary = "ALPS FLOW PREDICTION RESULTS:\n"
+                for res in results:
+                    summary += f"[{res['Date']} {res['Shift']}] Action Required: {res['Bridge_Action']}. End Backlog: {res['Planned_End_Backlog']} units.\n"
+                return summary
+            except Exception as e:
+                return f"Error running ALPS math: {str(e)}"
+            # Ensure you register 'run_alps_flow_prediction' in your Zep/Langchain tool initialization block at the bottom of the file.
+
     # ========== 核心检索工具（优化后） ==========
     
     def insight_forge(
