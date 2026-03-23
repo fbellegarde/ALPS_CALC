@@ -7,8 +7,8 @@ from typing import List, Dict, Any
 from app.services.ml_predictor import AlpsMachineLearning
 
 class AlpsFlowEngine:
-    def __init__(self, target_buffer=5000, diluted_tph=14.6):
-        self.target_buffer = target_buffer
+    def __init__(self, target_buffer=3000, diluted_tph=14.6):
+        self.target_buffer = target_buffer # Defaulting to the BOS7 safe WIP barrier
         self.diluted_tph = diluted_tph
         self.ml_engine = AlpsMachineLearning()
         
@@ -42,16 +42,18 @@ class AlpsFlowEngine:
                 pass 
 
         for shift in shift_data_list:
-            # Normalize keys to match Frontend/Excel expectations
+            # ENHANCEMENT: Bulletproof key extraction. Checks for both router formats and direct API formats.
             date_str = shift.get('Date', 'Unknown')
             shift_name = shift.get('Shift', 'Unknown')
             volume = float(shift.get('Volume', 0))
             sched_hc = float(shift.get('Scheduled_HC', shift.get('Scheduled HC', 0)))
             target_buffer = float(shift.get('Target_Handoff_Buffer', shift.get('Target Handoff Buffer', self.target_buffer)))
-            shift_length = float(shift.get('Shift_Length_Hrs', 10.0))
-            vet = float(shift.get('VET_Net_Hrs', 0))
-            vto = float(shift.get('VTO_Net_Hrs', 0))
-            misc_ls = float(shift.get('Misc_Labor_Share_Hrs', 0))
+            shift_length = float(shift.get('Shift_Length_Hrs', shift.get('Shift Length (Hrs)', 10.0)))
+            
+            # CRITICAL FIX: Extracting the manual levers correctly
+            vet = float(shift.get('VET_Net_Hrs', shift.get('VET Net (Hrs)', 0)))
+            vto = float(shift.get('VTO_Net_Hrs', shift.get('VTO Net (Hrs)', 0)))
+            misc_ls = float(shift.get('Misc_Labor_Share_Hrs', shift.get('Misc/Labor Share (Hrs)', 0)))
 
             # Machine Learning Override
             try:
@@ -67,33 +69,40 @@ class AlpsFlowEngine:
             # Phase 1: True Show Hours
             gross_hours = sched_hc * shift_length
             absence_hrs = gross_hours * absence_pct
-            show_hours = (gross_hours - absence_hrs) + vet - vto - misc_ls
+            
+            # Applying the manual levers directly to capacity
+            show_hours = (gross_hours - absence_hrs) + vet - vto + misc_ls
             
             # Phase 2: Capacity & Demand
             daily_capacity = show_hours * tph
             workable_demand_vol = volume + rolling_backlog
-            workable_demand_days = workable_demand_vol / daily_capacity if daily_capacity > 0 else 0
             
             # Phase 3: WIP Protection Math
             actionable_volume = max(0, workable_demand_vol - target_buffer)
             daily_volume_delta = daily_capacity - actionable_volume
             daily_hours_delta = daily_volume_delta / tph if tph > 0 else 0
 
-            # Phase 4: Executive Action
-            if daily_volume_delta >= 0:
-                action = f"SURPLUS: +{daily_hours_delta:.1f} Hrs"
-                action_type = "SURPLUS"
+            # Phase 4: Executive Action & UI Color Mapping
+            if daily_hours_delta >= 20:
+                action = f"+{daily_hours_delta:.1f} Hrs"
+                action_type = "VTO"  # Green in UI
+                trend_type = "SURPLUS"
+            elif daily_hours_delta <= -20:
+                action = f"{daily_hours_delta:.1f} Hrs"
+                action_type = "VET"  # Red in UI
+                trend_type = "DEFICIT"
             else:
-                action = f"DEFICIT: {daily_hours_delta:.1f} Hrs"
-                action_type = "DEFICIT"
+                action = f"BALANCED: {daily_hours_delta:.1f} Hrs"
+                action_type = "BALANCED"
+                trend_type = "BALANCED"
 
             planned_end_backlog = target_buffer if workable_demand_vol >= target_buffer else workable_demand_vol
 
             # --- TREND LOGIC ---
-            if action_type == current_trend:
+            if trend_type == current_trend:
                 streak_count += 1
             else:
-                current_trend = action_type
+                current_trend = trend_type
                 streak_count = 1
 
             if streak_count >= 7:
@@ -127,7 +136,7 @@ class AlpsFlowEngine:
                 "Shift_Name": shift_name,
                 "Volume": volume,
                 "Action_Required": action,
-                "Action_Category": action_type,
+                "Action_Category": trend_type,
                 "End_Backlog_Risk": int(planned_end_backlog),
                 "Historical_Feedback": feedback
             })

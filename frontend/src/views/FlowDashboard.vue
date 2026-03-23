@@ -13,6 +13,23 @@
     <div v-if="activeTab === 'predictor'">
       <div class="control-panel">
         <h2>1. Shift Input Data</h2>
+
+        <div 
+          class="csv-drop-zone" 
+          @dragover.prevent="isDragging = true" 
+          @dragleave.prevent="isDragging = false" 
+          @drop.prevent="handleDrop"
+          :class="{ 'dragging': isDragging }"
+        >
+          <div v-if="uploadingCsv" class="upload-spinner">Parsing Data...</div>
+          <div v-else>
+            <span class="drop-icon">📁</span>
+            <p>Drag & Drop Amazon Roster CSV Here</p>
+            <p class="sub-text">or click to browse</p>
+            <input type="file" accept=".csv" class="file-input" @change="handleFileSelect" />
+          </div>
+        </div>
+
         <button class="btn-amazon" @click="addShift">➕ Add Shift</button>
         <div class="table-container">
           <table class="input-table">
@@ -144,9 +161,53 @@ const API_BASE = 'http://localhost:8000/api/alps';
 const loading = ref(false);
 const results = ref([]);
 const shiftInputs = ref([
-  { Date: '2026-03-15', Shift: 'Day', Volume: 38000, Scheduled_HC: 230, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 120, Target_Handoff_Buffer: 5000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
-  { Date: '2026-03-15', Shift: 'Night', Volume: 41000, Scheduled_HC: 250, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 130, Target_Handoff_Buffer: 5000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
-  { Date: '2026-03-16', Shift: 'Day', Volume: 22000, Scheduled_HC: 230, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 120, Target_Handoff_Buffer: 4000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 }
+  // === WEEK 1: STANDARD FLOW ===
+  { Date: '2026-03-01', Shift: 'Day', Volume: 28000, Scheduled_HC: 210, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-01', Shift: 'Night', Volume: 29000, Scheduled_HC: 215, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-02', Shift: 'Day', Volume: 34000, Scheduled_HC: 240, Absence_Pct: 0.08, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-02', Shift: 'Night', Volume: 35000, Scheduled_HC: 245, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-03', Shift: 'Day', Volume: 33000, Scheduled_HC: 235, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-03', Shift: 'Night', Volume: 34000, Scheduled_HC: 240, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-04', Shift: 'Day', Volume: 32000, Scheduled_HC: 230, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-04', Shift: 'Night', Volume: 33000, Scheduled_HC: 235, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-05', Shift: 'Day', Volume: 31000, Scheduled_HC: 230, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-05', Shift: 'Night', Volume: 32000, Scheduled_HC: 235, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-06', Shift: 'Day', Volume: 30000, Scheduled_HC: 220, Absence_Pct: 0.13, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-06', Shift: 'Night', Volume: 31000, Scheduled_HC: 225, Absence_Pct: 0.14, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-07', Shift: 'Day', Volume: 28000, Scheduled_HC: 210, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-07', Shift: 'Night', Volume: 29000, Scheduled_HC: 215, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+
+  // === WEEK 2: THE "PRIME" PUSH (Massive Volume, Causes Deficits) ===
+  { Date: '2026-03-08', Shift: 'Day', Volume: 38000, Scheduled_HC: 230, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-08', Shift: 'Night', Volume: 40000, Scheduled_HC: 240, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-09', Shift: 'Day', Volume: 45000, Scheduled_HC: 250, Absence_Pct: 0.08, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-09', Shift: 'Night', Volume: 46000, Scheduled_HC: 255, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-10', Shift: 'Day', Volume: 44000, Scheduled_HC: 250, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-10', Shift: 'Night', Volume: 45000, Scheduled_HC: 255, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-11', Shift: 'Day', Volume: 43000, Scheduled_HC: 245, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-11', Shift: 'Night', Volume: 44000, Scheduled_HC: 250, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-12', Shift: 'Day', Volume: 42000, Scheduled_HC: 240, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-12', Shift: 'Night', Volume: 43000, Scheduled_HC: 245, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-13', Shift: 'Day', Volume: 40000, Scheduled_HC: 235, Absence_Pct: 0.13, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-13', Shift: 'Night', Volume: 41000, Scheduled_HC: 240, Absence_Pct: 0.14, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-14', Shift: 'Day', Volume: 38000, Scheduled_HC: 230, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-14', Shift: 'Night', Volume: 39000, Scheduled_HC: 235, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+
+  // === WEEK 3: POST-PEAK CRASH (Volume drops, Causes VTO needs) ===
+  { Date: '2026-03-15', Shift: 'Day', Volume: 24000, Scheduled_HC: 230, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-15', Shift: 'Night', Volume: 25000, Scheduled_HC: 235, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-16', Shift: 'Day', Volume: 26000, Scheduled_HC: 230, Absence_Pct: 0.08, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-16', Shift: 'Night', Volume: 27000, Scheduled_HC: 235, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-17', Shift: 'Day', Volume: 25000, Scheduled_HC: 220, Absence_Pct: 0.09, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-17', Shift: 'Night', Volume: 26000, Scheduled_HC: 225, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-18', Shift: 'Day', Volume: 24000, Scheduled_HC: 215, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-18', Shift: 'Night', Volume: 25000, Scheduled_HC: 220, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-19', Shift: 'Day', Volume: 23000, Scheduled_HC: 210, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-19', Shift: 'Night', Volume: 24000, Scheduled_HC: 215, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-20', Shift: 'Day', Volume: 22000, Scheduled_HC: 200, Absence_Pct: 0.13, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-20', Shift: 'Night', Volume: 23000, Scheduled_HC: 210, Absence_Pct: 0.14, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-21', Shift: 'Day', Volume: 20000, Scheduled_HC: 190, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
+  { Date: '2026-03-21', Shift: 'Night', Volume: 21000, Scheduled_HC: 195, Absence_Pct: 0.11, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 }
 ]);
 
 // New Integrated State
@@ -157,9 +218,57 @@ const chatLogs = ref([]);
 const newMessage = ref("");
 const messageContainer = ref(null);
 
+// ENHANCEMENT: CSV Upload State
+const isDragging = ref(false);
+const uploadingCsv = ref(false);
+
+// ENHANCEMENT: CSV Upload Methods
+const handleDrop = async (event) => {
+  isDragging.value = false;
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    await processCsvUpload(files[0]);
+  }
+};
+
+const handleFileSelect = async (event) => {
+  const files = event.target.files;
+  if (files.length > 0) {
+    await processCsvUpload(files[0]);
+  }
+};
+
+const processCsvUpload = async (file) => {
+  if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    alert('Strictly CSV files are supported.');
+    return;
+  }
+
+  uploadingCsv.value = true;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await axios.post(`${API_BASE}/upload_roster`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    
+    if (response.data.status === 'success') {
+      shiftInputs.value = response.data.data;
+    }
+  } catch (error) {
+    console.error('CSV Upload Error:', error);
+    alert('Failed to parse CSV. Check backend logs.');
+  } finally {
+    uploadingCsv.value = false;
+    const fileInput = document.querySelector('.file-input');
+    if (fileInput) fileInput.value = '';
+  }
+};
+
 // Preserved Original Methods
 const addShift = () => {
-  shiftInputs.value.push({ Date: '2026-MM-DD', Shift: 'Day', Volume: 0, Scheduled_HC: 0, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 5000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 });
+  shiftInputs.value.push({ Date: '2026-MM-DD', Shift: 'Day', Volume: 0, Scheduled_HC: 0, Absence_Pct: 0.10, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 });
 };
 
 const removeShift = (index) => {
@@ -183,7 +292,8 @@ const openChime = () => { activeTab.value = 'chime'; fetchSimulations(); };
 
 const fetchSimulations = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/simulations`);
+    // Cache buster included
+    const res = await axios.get(`${API_BASE}/simulations?t=${new Date().getTime()}`);
     simulationsList.value = res.data;
   } catch (e) { console.error("Sim fetch failed"); }
 };
@@ -263,13 +373,23 @@ th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
 th { background-color: #232F3E; color: white; }
 input, select { width: 90%; padding: 4px; box-sizing: border-box; }
 .chart-container { position: relative; height: 400px; width: 100%; margin-bottom: 20px; }
-.btn-amazon { background-color: #eaeded; border: 1px solid #a6a6a6; padding: 6px 12px; cursor: pointer; border-radius: 4px; color: #111; }
+.btn-amazon { background-color: #eaeded; border: 1px solid #a6a6a6; padding: 6px 12px; cursor: pointer; border-radius: 4px; color: #111; margin-bottom: 10px;}
 .btn-amazon-primary { background-color: #FF9900; border: 1px solid #a88734; padding: 10px 20px; cursor: pointer; border-radius: 4px; color: #111; font-weight: bold; font-size: 16px; width: 100%; }
 .btn-danger { background-color: #D13212; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; }
 .text-teal { color: #008296; font-weight: bold; }
 .text-red { color: #D13212; font-weight: bold; }
 .text-green { color: #006100; font-weight: bold; }
 .text-ai { color: #8a2be2; font-weight: bold; }
+
+/* ENHANCEMENT: CSV DRAG & DROP ZONE STYLES */
+.csv-drop-zone { border: 2px dashed #a6a6a6; border-radius: 8px; background-color: #f8f8f8; text-align: center; padding: 30px 20px; margin-bottom: 20px; position: relative; transition: all 0.2s ease-in-out; cursor: pointer; }
+.csv-drop-zone.dragging { border-color: #FF9900; background-color: #fff4e5; }
+.csv-drop-zone p { margin: 5px 0; color: #232F3E; font-weight: bold; }
+.csv-drop-zone .sub-text { font-size: 12px; color: #555; font-weight: normal; }
+.drop-icon { font-size: 32px; display: block; margin-bottom: 10px; }
+.file-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.upload-spinner { color: #008296; font-weight: bold; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
 /* NEW TAB & CHIME STYLES */
 .tab-menu { margin-top: 15px; display: flex; gap: 10px; }
