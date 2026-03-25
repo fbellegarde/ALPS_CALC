@@ -41,7 +41,9 @@ class ShiftInput(BaseModel):
         except ValueError:
             return v
 
+# ENHANCEMENT: Payload now accepts the global initial_backlog property
 class AlpsPredictionRequest(BaseModel):
+    initial_backlog: float = 0.0
     shifts: List[ShiftInput]
 
 @router.post("/predict")
@@ -54,17 +56,36 @@ async def predict_flow(request: AlpsPredictionRequest):
                 "Date": s.Date,
                 "Shift": s.Shift,
                 "Volume": s.Volume,
+                
+                # ENHANCEMENT: Dual-Key mapping to ensure bulletproof data transfer 
+                # between the new Vue TPH input and the Math Engine
                 "Target Handoff Buffer": s.Target_Handoff_Buffer,
+                "Target_Handoff_Buffer": s.Target_Handoff_Buffer,
+                
                 "Diluted Rate (TPH)": s.Diluted_Rate_TPH,
+                "Diluted_Rate_TPH": s.Diluted_Rate_TPH,
+                
                 "Shift Length (Hrs)": s.Shift_Length_Hrs,
+                "Shift_Length_Hrs": s.Shift_Length_Hrs,
+                
                 "Scheduled HC": s.Scheduled_HC,
+                "Scheduled_HC": s.Scheduled_HC,
+                
                 "Absence Pct": s.Absence_Pct,
+                "Absence_Pct": s.Absence_Pct,
+                
                 "VET Net (Hrs)": s.VET_Net_Hrs,
+                "VET_Net_Hrs": s.VET_Net_Hrs,
+                
                 "VTO Net (Hrs)": s.VTO_Net_Hrs,
-                "Misc/Labor Share (Hrs)": s.Misc_Labor_Share_Hrs
+                "VTO_Net_Hrs": s.VTO_Net_Hrs,
+                
+                "Misc/Labor Share (Hrs)": s.Misc_Labor_Share_Hrs,
+                "Misc_Labor_Share_Hrs": s.Misc_Labor_Share_Hrs
             })
         
-        result = alps_engine.calculate_cascade(shift_dicts)
+        # Pass the initial backlog from the Vue UI directly into the Engine
+        result = alps_engine.calculate_cascade(shift_dicts, initial_backlog=request.initial_backlog)
         return {"status": "success", "data": result}
     
     except Exception as e:

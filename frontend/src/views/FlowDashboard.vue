@@ -30,6 +30,13 @@
           </div>
         </div>
 
+        <div class="global-settings">
+          <strong>Live Building Variables:</strong>
+          <label>Current Starting Backlog:</label>
+          <input type="number" v-model.number="initialBacklog" placeholder="e.g. 19500" class="backlog-input" />
+          <span class="sub-text">(Injected into Shift 1 calculations)</span>
+        </div>
+
         <button class="btn-amazon" @click="addShift">➕ Add Shift</button>
         <div class="table-container">
           <table class="input-table">
@@ -38,6 +45,8 @@
                 <th>Date</th>
                 <th>Shift</th>
                 <th>Volume</th>
+                <th>Target Buffer</th>
+                <th>TPH</th>
                 <th>Sched HC</th>
                 <th>Absence %</th>
                 <th>VET Net</th>
@@ -56,7 +65,11 @@
                   </select>
                 </td>
                 <td><input type="number" v-model.number="shift.Volume" /></td>
-                <td><input type="number" v-model.number="shift.Scheduled_HC" /></td>
+                <td><input type="number" v-model.number="shift.Target_Handoff_Buffer" step="100" style="width: 80px;" /></td>
+                <td><input type="number" v-model.number="shift.Diluted_Rate_TPH" step="0.1" style="width: 70px;" /></td>
+                <td :class="{ 'warning-bg': shift.Scheduled_HC > 0 && shift.Scheduled_HC < 40 }">
+                  <input type="number" v-model.number="shift.Scheduled_HC" />
+                </td>
                 <td><input type="number" v-model.number="shift.Absence_Pct" step="0.01" /></td>
                 <td><input type="number" v-model.number="shift.VET_Net_Hrs" /></td>
                 <td><input type="number" v-model.number="shift.VTO_Net_Hrs" /></td>
@@ -148,7 +161,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { predictFlow } from '../api/alps';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, LineController, BarController } from 'chart.js';
 import { Chart } from 'vue-chartjs';
 
@@ -160,6 +172,7 @@ const API_BASE = 'http://localhost:8000/api/alps';
 // Preserved Original State
 const loading = ref(false);
 const results = ref([]);
+const initialBacklog = ref(0); // ENHANCEMENT: Master state for initial pump prime
 const shiftInputs = ref([
   // === WEEK 1: STANDARD FLOW ===
   { Date: '2026-03-01', Shift: 'Day', Volume: 28000, Scheduled_HC: 210, Absence_Pct: 0.12, VET_Net_Hrs: 0, VTO_Net_Hrs: 0, Misc_Labor_Share_Hrs: 0, Target_Handoff_Buffer: 3000, Diluted_Rate_TPH: 14.6, Shift_Length_Hrs: 10.0 },
@@ -275,12 +288,17 @@ const removeShift = (index) => {
   shiftInputs.value.splice(index, 1);
 };
 
+// ENHANCEMENT: Bypass local API wrapper to directly pass the new payload
 const executeMathEngine = async () => {
   loading.value = true;
   try {
-    const data = await predictFlow(shiftInputs.value);
-    results.value = data;
+    const response = await axios.post(`${API_BASE}/predict`, {
+      initial_backlog: initialBacklog.value,
+      shifts: shiftInputs.value
+    });
+    results.value = response.data.data;
   } catch (error) {
+    console.error("API Error Details:", error);
     alert("API Error: Backend Port 8000 Offline");
   } finally {
     loading.value = false;
@@ -292,7 +310,6 @@ const openChime = () => { activeTab.value = 'chime'; fetchSimulations(); };
 
 const fetchSimulations = async () => {
   try {
-    // Cache buster included
     const res = await axios.get(`${API_BASE}/simulations?t=${new Date().getTime()}`);
     simulationsList.value = res.data;
   } catch (e) { console.error("Sim fetch failed"); }
@@ -309,7 +326,6 @@ const sendMessage = async () => {
   newMessage.value = ""; // Clear for UI responsiveness
   
   try {
-    // Explicitly using a full URL and headers for the POST bridge
     const response = await axios.post(`${API_BASE}/simulation/${selectedSimId.value}/send`, 
       { message: text },
       { headers: { 'Content-Type': 'application/json' } }
@@ -380,6 +396,15 @@ input, select { width: 90%; padding: 4px; box-sizing: border-box; }
 .text-red { color: #D13212; font-weight: bold; }
 .text-green { color: #006100; font-weight: bold; }
 .text-ai { color: #8a2be2; font-weight: bold; }
+
+/* ENHANCEMENT: Skeleton Crew Warning */
+.warning-bg { background-color: #fff4e5; border: 2px solid #FF9900; }
+
+/* ENHANCEMENT: Global Settings Input */
+.global-settings { background: #fff4e5; border-left: 5px solid #FF9900; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+.global-settings strong { color: #232F3E; margin-right: 15px; }
+.global-settings label { font-weight: bold; margin-right: 10px; }
+.backlog-input { width: 150px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; display: inline-block; }
 
 /* ENHANCEMENT: CSV DRAG & DROP ZONE STYLES */
 .csv-drop-zone { border: 2px dashed #a6a6a6; border-radius: 8px; background-color: #f8f8f8; text-align: center; padding: 30px 20px; margin-bottom: 20px; position: relative; transition: all 0.2s ease-in-out; cursor: pointer; }

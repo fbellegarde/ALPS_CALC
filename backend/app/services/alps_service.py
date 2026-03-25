@@ -17,9 +17,11 @@ class AlpsFlowEngine:
         os.makedirs(self.log_dir, exist_ok=True)
         self.log_file = os.path.join(self.log_dir, "alps_prediction_history.csv")
 
-    def calculate_cascade(self, shift_data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # ENHANCEMENT: Accepts initial_backlog straight from the frontend
+    def calculate_cascade(self, shift_data_list: List[Dict[str, Any]], initial_backlog: float = 0.0) -> List[Dict[str, Any]]:
         cascade_data = []
-        rolling_backlog = 0.0
+        # CRITICAL FIX: The pump prime is now seamlessly handled here
+        rolling_backlog = initial_backlog
         log_entries = []
 
         # --- HISTORICAL TREND ANALYSIS ---
@@ -54,6 +56,9 @@ class AlpsFlowEngine:
             vet = float(shift.get('VET_Net_Hrs', shift.get('VET Net (Hrs)', 0)))
             vto = float(shift.get('VTO_Net_Hrs', shift.get('VTO Net (Hrs)', 0)))
             misc_ls = float(shift.get('Misc_Labor_Share_Hrs', shift.get('Misc/Labor Share (Hrs)', 0)))
+            
+            # ENHANCEMENT: Extract the TPH directly from the Vue UI payload
+            ui_tph = float(shift.get('Diluted_Rate_TPH', shift.get('Diluted Rate (TPH)', self.diluted_tph)))
 
             # Machine Learning Override
             try:
@@ -63,7 +68,8 @@ class AlpsFlowEngine:
             
             ml_predictions = self.ml_engine.predict_shift_variance(day_of_week, volume, sched_hc)
             
-            tph = ml_predictions.get("Predicted_TPH", self.diluted_tph)
+            # ENHANCEMENT: Prioritize the UI TPH so you have absolute manual control over the baseline
+            tph = ui_tph
             absence_pct = ml_predictions.get("Predicted_Absence", 0.10)
 
             # Phase 1: True Show Hours
